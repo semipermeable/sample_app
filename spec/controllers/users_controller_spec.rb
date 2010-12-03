@@ -32,6 +32,13 @@ describe UsersController do
       get :new
       response.should have_selector("input[name='user[password_confirmation]'][type='password']")
     end
+    
+    it "should redirect signed in user" do
+      user = Factory(:user)
+      test_sign_in(user)
+      get :new
+      response.should redirect_to(root_path)
+    end
   end
 
   describe "GET 'show'" do
@@ -208,6 +215,28 @@ describe UsersController do
         response.should have_selector('a', :href => "/users?page=2", :content => "Next")
       end
     end
+    
+    describe "for non-admin users" do
+      before(:each) do
+        @user = test_sign_in(Factory(:user))
+      end
+      it "should not show a delete link" do
+        get :index
+        response.should_not have_selector('a', :content => 'delete')
+      end
+    end
+    
+    describe "for admin users" do
+      before(:each) do
+        @user = test_sign_in(Factory(:user, :admin => true))
+        @nonadmin = Factory(:user, :name => 'nonadmin', :email => "some@other.email.com")
+      end
+      it "should show a delete link" do
+        get :index
+        response.should have_selector('a', :title => "Delete nonadmin", :content => 'delete')
+        response.should_not have_selector('a', :title => "Delete Example User")
+      end
+    end
   end
   
   describe "DELETE 'destroy'" do
@@ -232,8 +261,8 @@ describe UsersController do
     
     describe "as an admin user" do
       before(:each) do
-        admin = Factory(:user, :email => "admin@example.com", :admin => true)
-        test_sign_in(admin)
+        @admin = Factory(:user, :email => "admin@example.com", :admin => true)
+        test_sign_in(@admin)
       end
       
       it "should destroy the user" do
@@ -245,6 +274,13 @@ describe UsersController do
       it "should redirect to the users page" do
         delete :destroy, :id => @user
         response.should redirect_to(users_path)
+      end
+      
+      it "should not destroy the admin" do
+        lambda do
+          delete :destroy, :id => @admin
+          response.should redirect_to(users_path)
+        end.should_not change(User, :count)
       end
     end
   end
@@ -287,6 +323,17 @@ describe UsersController do
         post :create, :user => @attr
         assigns[:user].password.should be_blank
       end 
+    end
+    
+    describe "signed in user" do
+      it "should redirect to root" do
+        user = Factory(:user)
+        test_sign_in(user)
+        lambda do
+          post :create, :user => {}
+          response.should redirect_to(root_path)
+        end.should_not change(User, :count)
+      end
     end
     
     describe "success" do

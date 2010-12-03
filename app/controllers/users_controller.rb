@@ -2,6 +2,8 @@ class UsersController < ApplicationController
   before_filter :authenticate, :only => [:destroy, :index, :edit, :update]
   before_filter :correct_user, :only => [:edit, :update]
   before_filter :admin_user, :only => :destroy
+  before_filter :not_self, :only => :destroy
+  before_filter :not_signed_in, :only => [:new, :create]
  
   def index
     @title = "All users"
@@ -64,5 +66,14 @@ class UsersController < ApplicationController
     
     def admin_user
       redirect_to(root_path) unless current_user.admin?
+    end
+    
+    def not_signed_in
+      redirect_to(root_path) unless !signed_in?
+    end
+    
+    def not_self
+      target = User.find(params[:id])
+      redirect_to(users_path) unless !current_user?(target)
     end
 end
