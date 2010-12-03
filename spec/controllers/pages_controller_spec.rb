@@ -18,6 +18,23 @@ describe PagesController do
       response.should have_selector("title", 
                     :content => @base_title + "Home")
     end
+    
+    describe "signed in users" do
+      before(:each) do
+        @user = test_sign_in(Factory(:user))
+      end
+      
+      it "should have a micropost form" do
+        get 'home'
+        response.should have_selector('form', :class => 'new_micropost')
+      end
+      
+      it "should have a micropost feed" do
+        mp1 = Factory(:micropost, :user => @user, :content => "Foo bar")
+        get 'home'
+        response.should have_selector('table', :class => 'microposts')
+      end
+    end
   end
 
   describe "GET 'contact'" do
